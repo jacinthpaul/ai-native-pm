@@ -2,7 +2,7 @@
 
 > An open-source knowledge base for AI-native Product Managers.
 
-Built and maintained by [Jacinth Paul](https://github.com/jacinthpaul) / [PSHQ](https://pshq.com) — a learning community for PMs working with AI and emerging tech.
+Built and maintained by [Jacinth Paul](https://github.com/jacinthpaul) / [PSHQ](https://programstrategyhq.com.com) — a learning community for PMs working with AI and emerging tech.
 
 ---
 
