@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planning Poker Copilot</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Config Modal ────────────────────────────────────────────────── -->
+  <div id="config-modal" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h2>⚙ Configuration</h2>
+      <div class="form-group"><label>Jira URL</label><input type="url" id="cfg-jira-url" placeholder="https://your-domain.atlassian.net"></div>
+      <div class="form-group"><label>Jira Email</label><input type="email" id="cfg-jira-email" placeholder="you@company.com"></div>
+      <div class="form-group"><label>Jira API Token</label><input type="password" id="cfg-jira-token" placeholder="Your Jira API token"></div>
+      <div class="form-group"><label>Story Points Field <small style="font-weight:400;text-transform:none">(default: customfield_10336)</small></label><input type="text" id="cfg-sp-field" placeholder="customfield_10336"></div>
+      <div class="form-group"><label>Anthropic API Key <small style="font-weight:400;text-transform:none">(optional)</small></label><input type="password" id="cfg-ai-key" placeholder="sk-ant-..."></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-red btn-sm" id="btn-test-connection">Test Connection</button>
+        <button class="btn btn-dark btn-sm" id="btn-close-config">Cancel</button>
+        <button class="btn btn-red" id="btn-save-config">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SETUP VIEW
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="view-setup" class="view">
+
+    <div class="hero-header">
+      <h1>Planning Poker Copilot</h1>
+      <p>Human AI Collaboration for Story Estimating</p>
+      <div class="hero-actions">
+        <button class="btn btn-ghost btn-sm" id="btn-open-config">⚙ Initial Setup</button>
+        <span id="ai-status-badge" class="ai-badge ai-unavailable">🤖 AI Unavailable</span>
+      </div>
+    </div>
+
+    <main>
+      <!-- Board selection -->
+      <div id="board-section">
+        <h2 class="section-title">Select Your Board</h2>
+        <p class="section-sub">Choose a Jira board to load its sprints</p>
+        <div class="board-row">
+          <select id="board-select">
+            <option value="">— Loading boards… —</option>
+          </select>
+          <button class="btn btn-red" id="btn-load-board">Load Sprints</button>
+        </div>
+        <p class="board-hint" id="board-hint" style="display:none"></p>
+      </div>
+
+      <!-- Sprint list (revealed after board load) -->
+      <div id="sprint-list-wrap" style="display:none">
+        <p id="sprint-list-status" class="sprint-list-status"></p>
+        <div id="sprint-list"></div>
+        <button class="btn-show-more" id="btn-show-more" style="display:none" onclick="showMoreSprints()">Show More Sprints</button>
+      </div>
+
+      <hr class="section-divider" id="team-divider" style="display:none">
+
+      <!-- Team members (revealed after sprint selected) -->
+      <div id="team-section" style="display:none">
+        <h2 class="section-title" style="text-align:left">Team Members</h2>
+
+        <div id="team-list" class="team-grid">
+          <!-- member cards injected here -->
+        </div>
+
+        <div class="add-member-row-setup">
+          <input type="text" id="new-member-name" placeholder="Add team member...">
+          <button onclick="addTeamMember()">Add Member</button>
+        </div>
+
+        <div class="session-start-row">
+          <button class="btn btn-dark" id="btn-ai-config-btn" onclick="openConfig()">🤖 AI Config</button>
+          <button class="btn btn-red btn-lg" id="btn-start">Start Pointing Session</button>
+        </div>
+
+        <!-- hidden backlog button -->
+        <button id="btn-start-backlog" style="display:none"></button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       VOTING VIEW
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="view-voting" class="view">
+
+    <!-- Red top bar -->
+    <div class="voting-bar">
+      <h2 id="session-title">Sprint</h2>
+      <div class="voting-bar-right">
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar-fill"></div></div>
+        <span id="ai-status-badge-vote" class="ai-badge ai-unavailable" style="font-size:.7rem;padding:3px 10px"></span>
+        <button class="btn btn-ghost btn-sm" onclick="openConfig()">⚙</button>
+      </div>
+    </div>
+
+    <main>
+      <!-- Story navigation -->
+      <div class="story-nav">
+        <span class="story-nav-label" id="progress-text">Story 1 of 1</span>
+        <div class="story-nav-buttons">
+          <button class="btn btn-dark btn-sm" id="btn-prev" disabled>← Previous</button>
+          <button class="btn btn-dark btn-sm" id="btn-next">Next →</button>
+        </div>
+      </div>
+
+      <!-- Story details card -->
+      <div class="story-card">
+        <div class="story-jira-link">
+          <a id="issue-key-link" href="#" target="_blank"><span id="issue-key-val"></span></a>
+          &nbsp;·&nbsp; <span id="issue-type"></span>
+        </div>
+        <div id="issue-key" style="display:none"></div><!-- kept for JS compat -->
+        <h2 id="issue-summary"></h2>
+        <div class="description-content" id="issue-description"></div>
+        <div class="story-meta">
+          <span>Assignee: <strong id="story-assignee">—</strong></span>
+          <span>Status: <strong id="story-status">—</strong></span>
+          <span id="existing-points" class="meta-tag meta-current-pts" style="display:none"></span>
+          <span id="issue-epic" class="meta-tag meta-epic" style="display:none"></span>
+          <span id="issue-priority" style="display:none"></span>
+          <div id="issue-labels"></div>
+        </div>
+      </div>
+
+      <!-- Cast Your Vote -->
+      <div class="vote-section" id="vote-actions">
+        <div class="vote-section-title">Cast Your Vote</div>
+        <p class="vote-hint" id="vote-hint">Click a team member below, then select their vote</p>
+        <div class="vote-cards-row" id="vote-cards-row">
+          <!-- vote card buttons injected here -->
+        </div>
+      </div>
+
+      <!-- Copilot Questions -->
+      <div class="copilot-panel" id="copilot-panel" style="display:none">
+        <div class="copilot-panel-header">
+          <div class="copilot-panel-header-text">
+            <strong>Pointing Poker Copilot Questions</strong>
+            <p>Let's refine our understanding before consensus</p>
+          </div>
+          <button class="copilot-toggle-btn" onclick="toggleCopilotPanel()">−</button>
+        </div>
+        <div class="copilot-body" id="copilot-body">
+          <span class="muted loading-dots">Loading questions</span>
+        </div>
+        <div class="copilot-footer" id="copilot-footer" style="display:none">
+          <button class="btn btn-red btn-sm" onclick="closeCopilotPanel()">Continue to Additional Considerations →</button>
+        </div>
+      </div>
+
+      <!-- Team Votes -->
+      <div class="team-votes-section">
+        <div class="team-votes-title">Team Votes</div>
+        <div id="team-votes" class="team-vote-grid"></div>
+
+        <div class="voting-actions" id="voting-action-bar">
+          <button class="btn btn-red" id="btn-reveal">Reveal Votes</button>
+          <button class="btn btn-dark" id="btn-revote">Reset Votes</button>
+          <button class="btn btn-dark btn-sm" id="btn-skip">Skip</button>
+          <span id="consensus-wrap" style="display:none">
+            <span class="consensus-inline">
+              <label for="consensus-select">Consensus Points:</label>
+              <select id="consensus-select">
+                <option value="1">1</option><option value="2">2</option>
+                <option value="3">3</option><option value="5">5</option><option value="8">8</option>
+              </select>
+              <button class="btn btn-red" id="btn-save-next">Save to Jira</button>
+              <button class="btn btn-dark" id="btn-hide-votes" onclick="revote()">Reset Votes</button>
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <!-- AI estimate detail panel (Why?) -->
+      <div id="ai-estimate-panel" style="display:none">
+        <div class="ai-why-panel">
+          <div id="ai-estimate-content"></div>
+        </div>
+      </div>
+
+      <!-- Results panel (vote distribution + scrum master) -->
+      <div id="results-panel" style="display:none">
+        <div class="reveal-summary">
+          <div class="median-block">
+            <div class="median-label">Median</div>
+            <div class="median-num" id="result-median">—</div>
+            <div class="median-unit">pts</div>
+          </div>
+          <div id="vote-distribution" class="dist-chart"></div>
+        </div>
+
+        <div class="scrum-section">
+          <h4>🤖 Scrum Master Analysis</h4>
+          <div id="scrum-questions"><span class="muted loading-dots">Loading</span></div>
+          <div class="chat-section">
+            <h4>Follow-up with Scrum Master</h4>
+            <div id="chat-messages"></div>
+            <div class="chat-input-row">
+              <textarea id="chat-input" rows="2" placeholder="Ask the Scrum Master…"></textarea>
+              <button class="btn btn-red btn-sm" id="btn-chat-send">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Session Statistics -->
+      <div class="session-stats-bar">
+        <div class="stat-block"><div class="stat-val" id="stats-live-pointed">0</div><div class="stat-lbl">Stories Pointed</div></div>
+        <div class="stat-block"><div class="stat-val" id="stats-live-remaining">0</div><div class="stat-lbl">Stories Remaining</div></div>
+        <div class="stat-block"><div class="stat-val" id="stats-live-points">0</div><div class="stat-lbl">Total Points</div></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       STATS VIEW
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="view-stats" class="view">
+    <div class="hero-header">
+      <h1>Session Complete 🎉</h1>
+      <p>Here's a summary of your pointing session</p>
+    </div>
+    <div class="stats-main">
+      <div class="stats-grid">
+        <div class="stats-card"><div class="stat-val" id="stats-pointed">0</div><div class="stat-label">Stories Pointed</div></div>
+        <div class="stats-card"><div class="stat-val" id="stats-skipped">0</div><div class="stat-label">Skipped</div></div>
+        <div class="stats-card"><div class="stat-val" id="stats-total">0</div><div class="stat-label">Total Issues</div></div>
+        <div class="stats-card"><div class="stat-val" id="stats-avg">—</div><div class="stat-label">Avg Points</div></div>
+      </div>
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead><tr><th>Key</th><th>Summary</th><th>Points</th></tr></thead>
+          <tbody id="stats-breakdown"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-red" id="btn-new-session">← New Session</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div id="toast-container"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
