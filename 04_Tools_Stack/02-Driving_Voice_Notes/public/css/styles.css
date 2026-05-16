@@ -1,0 +1,220 @@
+:root {
+  --bg: #1a1a1a;
+  --surface: #252525;
+  --accent: #c0392b;
+  --accent-glow: rgba(192, 57, 43, 0.4);
+  --text: #f0f0f0;
+  --muted: #888;
+  --success: #27ae60;
+  --error: #e74c3c;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.notion-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #333;
+  color: var(--text);
+  text-decoration: none;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.notion-btn:hover { background: #444; }
+.notion-btn .icon { font-size: 16px; }
+
+/* ── Main recorder area ── */
+.recorder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 60px);
+  padding: 32px 24px;
+  gap: 32px;
+}
+
+/* ── Mode label ── */
+.mode-label {
+  font-size: 15px;
+  color: var(--muted);
+  text-align: center;
+  min-height: 22px;
+  transition: color 0.3s;
+}
+
+/* ── Mic button ── */
+.mic-btn {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 72px;
+  transition: transform 0.15s, box-shadow 0.3s, background 0.3s;
+  box-shadow: 0 0 0 0 var(--accent-glow);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mic-btn:active { transform: scale(0.95); }
+
+/* listening state — subtle blue glow */
+.mic-btn.listening {
+  box-shadow: 0 0 0 8px rgba(52, 152, 219, 0.2);
+  animation: pulse-listen 2s ease-in-out infinite;
+}
+
+/* capturing state — red pulsing */
+.mic-btn.capturing {
+  background: rgba(192, 57, 43, 0.15);
+  box-shadow: 0 0 0 12px var(--accent-glow);
+  animation: pulse-record 1s ease-in-out infinite;
+}
+
+/* processing state */
+.mic-btn.processing {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@keyframes pulse-listen {
+  0%, 100% { box-shadow: 0 0 0 8px rgba(52, 152, 219, 0.15); }
+  50%       { box-shadow: 0 0 0 16px rgba(52, 152, 219, 0.05); }
+}
+
+@keyframes pulse-record {
+  0%, 100% { box-shadow: 0 0 0 12px rgba(192, 57, 43, 0.4); }
+  50%       { box-shadow: 0 0 0 28px rgba(192, 57, 43, 0.1); }
+}
+
+/* ── Timer ── */
+.timer {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+  color: var(--accent);
+  display: none;
+}
+
+/* ── Live transcript ── */
+.live-text {
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+  min-height: 44px;
+  max-width: 320px;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* ── Today count ── */
+.today-count {
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface);
+  padding: 8px 18px;
+  border-radius: 20px;
+}
+
+/* ── Instructions ── */
+.instructions {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 320px;
+  width: 100%;
+}
+
+.instructions h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 12px;
+}
+
+.instructions ol {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.instructions li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.instructions li strong {
+  color: var(--accent);
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--success);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.error { background: var(--error); }
+
+/* ── Responsive tweaks for very small screens ── */
+@media (max-height: 650px) {
+  .mic-btn { width: 160px; height: 160px; font-size: 56px; }
+  .instructions { display: none; }
+  .recorder { gap: 20px; }
+}
