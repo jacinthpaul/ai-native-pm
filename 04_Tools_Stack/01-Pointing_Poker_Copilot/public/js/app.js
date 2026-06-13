@@ -856,5 +856,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Stats
   $('#btn-new-session')?.addEventListener('click', restartSession);
 
-  initSetup();
+  // Routing is owned by multiplayer.js (landing → quick session / Jira).
+  // Fall back to the Jira setup flow if multiplayer didn't load.
+  if (typeof routeInitial === 'function') routeInitial();
+  else initSetup();
 });

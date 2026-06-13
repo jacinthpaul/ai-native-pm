@@ -13,17 +13,186 @@
   <div id="config-modal" role="dialog" aria-modal="true">
     <div class="modal-box">
       <h2>⚙ Configuration</h2>
-      <div class="form-group"><label>Jira URL</label><input type="url" id="cfg-jira-url" placeholder="https://your-domain.atlassian.net"></div>
-      <div class="form-group"><label>Jira Email</label><input type="email" id="cfg-jira-email" placeholder="you@company.com"></div>
-      <div class="form-group"><label>Jira API Token</label><input type="password" id="cfg-jira-token" placeholder="Your Jira API token"></div>
-      <div class="form-group"><label>Story Points Field <small style="font-weight:400;text-transform:none">(default: customfield_10336)</small></label><input type="text" id="cfg-sp-field" placeholder="customfield_10336"></div>
-      <div class="form-group"><label>Anthropic API Key <small style="font-weight:400;text-transform:none">(optional)</small></label><input type="password" id="cfg-ai-key" placeholder="sk-ant-..."></div>
+
+      <details class="setup-help">
+        <summary>📖 First time here? How to get these values</summary>
+        <ol>
+          <li><strong>Jira URL</strong> — your Atlassian site address. Open Jira in your browser and copy everything up to <code>.atlassian.net</code>, e.g. <code>https://yourcompany.atlassian.net</code>.</li>
+          <li><strong>Jira Email</strong> — the email address you use to log in to Jira.</li>
+          <li><strong>Jira API Token</strong> — not your password! Create one at
+            <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">id.atlassian.com → Security → API tokens</a>:
+            click <em>Create API token</em>, give it a name (e.g. "Planning Poker"), then copy &amp; paste it here. It is stored only in this browser.</li>
+          <li><strong>Story Points Field</strong> — the Jira custom field where saved estimates go. Most Jira Cloud sites use <code>customfield_10016</code> ("Story point estimate"). Leave the default first; if "Save to Jira" fails, find your field ID under <em>Jira Settings → Issues → Custom fields → Story point estimate</em>.</li>
+        </ol>
+        <p class="setup-help-footer">Use <strong>Test Connection</strong> after saving to verify your credentials. ✅</p>
+      </details>
+
+      <div class="form-group">
+        <label>Jira URL</label>
+        <input type="url" id="cfg-jira-url" placeholder="https://your-domain.atlassian.net">
+        <p class="field-hint">Your Atlassian site, e.g. <code>https://yourcompany.atlassian.net</code></p>
+      </div>
+      <div class="form-group">
+        <label>Jira Email</label>
+        <input type="email" id="cfg-jira-email" placeholder="you@company.com">
+        <p class="field-hint">The email you sign in to Jira with</p>
+      </div>
+      <div class="form-group">
+        <label>Jira API Token</label>
+        <input type="password" id="cfg-jira-token" placeholder="Your Jira API token">
+        <p class="field-hint">Create one at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">id.atlassian.com → API tokens</a> — not your Jira password</p>
+      </div>
+      <div class="form-group">
+        <label>Story Points Field <small style="font-weight:400;text-transform:none">(default: customfield_10336)</small></label>
+        <input type="text" id="cfg-sp-field" placeholder="customfield_10336">
+        <p class="field-hint">Where estimates are saved in Jira. Most Jira Cloud sites use <code>customfield_10016</code>; the app auto-falls back to it if saving fails</p>
+      </div>
+      <div class="form-group">
+        <label>Anthropic API Key <small style="font-weight:400;text-transform:none">(optional)</small></label>
+        <input type="password" id="cfg-ai-key" placeholder="sk-ant-...">
+        <p class="field-hint">For AI estimates &amp; Scrum Master analysis. Note: currently read from the server's <code>.env</code> file (<code>ANTHROPIC_API_KEY</code>) — set it there and restart the server. Use <code>MOCK</code> to demo without a key</p>
+      </div>
       <div class="modal-footer">
         <button class="btn btn-outline-red btn-sm" id="btn-test-connection">Test Connection</button>
         <button class="btn btn-dark btn-sm" id="btn-close-config">Cancel</button>
         <button class="btn btn-red" id="btn-save-config">Save</button>
       </div>
     </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       LANDING VIEW — choose mode
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="view-landing" class="view">
+    <div class="hero-header">
+      <h1>Planning Poker</h1>
+      <p>Estimate together — in the room or remote</p>
+    </div>
+    <main>
+      <div class="mode-grid">
+        <div class="mode-card" id="mode-quick">
+          <div class="mode-icon">⚡</div>
+          <h2>Quick Session</h2>
+          <p>No login, no setup. Start a room, share the link, and everyone votes live from their own device.</p>
+          <button class="btn btn-red btn-lg btn-block">Start a Quick Session</button>
+          <button class="btn btn-outline-red btn-block" id="mode-quick-join" style="margin-top:10px">Join with a code</button>
+        </div>
+        <div class="mode-card" id="mode-jira">
+          <div class="mode-icon">🔗</div>
+          <h2>Jira + AI Mode</h2>
+          <p>Connect a Jira board to pull real stories, save points back, and get AI estimates &amp; a Scrum Master copilot.</p>
+          <button class="btn btn-dark btn-lg btn-block">Connect Jira &amp; AI</button>
+          <p class="mode-note">Requires a Jira API token (and optional Anthropic key)</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       QUICK SESSION — create / join
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="view-quick" class="view">
+    <div class="hero-header">
+      <h1>Quick Session</h1>
+      <p>Start a new room or join an existing one</p>
+      <div class="hero-actions">
+        <button class="btn btn-ghost btn-sm" id="btn-quick-back">← Back</button>
+      </div>
+    </div>
+    <main>
+      <div class="quick-grid">
+        <!-- Create -->
+        <div class="quick-card">
+          <h2 class="section-title" style="text-align:left">Start a new session</h2>
+          <div class="form-group"><label>Your name</label><input type="text" id="q-host-name" placeholder="e.g. Jay" maxlength="40"></div>
+          <div class="form-group"><label>Session name <small style="font-weight:400;text-transform:none">(optional)</small></label><input type="text" id="q-session-name" placeholder="e.g. Sprint 12 Estimation" maxlength="80"></div>
+          <div class="form-group">
+            <label>Card deck</label>
+            <select id="q-scale">
+              <option value="fibonacci">Fibonacci — 0,1,2,3,5,8,13,20,40,100,?,☕</option>
+              <option value="simple">Simple — 1,2,3,5,8,?</option>
+              <option value="tshirt">T-shirt — XS,S,M,L,XL,?</option>
+            </select>
+          </div>
+          <button class="btn btn-red btn-lg btn-block" id="btn-create-session">Create Session</button>
+        </div>
+
+        <!-- Join -->
+        <div class="quick-card">
+          <h2 class="section-title" style="text-align:left">Join a session</h2>
+          <div class="form-group"><label>Session code</label><input type="text" id="q-join-id" placeholder="6-digit code, e.g. 788065" inputmode="numeric" maxlength="8"></div>
+          <div class="form-group"><label>Your name</label><input type="text" id="q-join-name" placeholder="e.g. Meera" maxlength="40"></div>
+          <label class="checkbox-row"><input type="checkbox" id="q-observer"> Join as observer (watch, don't vote)</label>
+          <button class="btn btn-dark btn-lg btn-block" id="btn-join-session" style="margin-top:6px">Join Session</button>
+          <p class="quick-join-hint" id="quick-join-hint"></p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       ROOM VIEW — live multiplayer voting
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="view-room" class="view">
+    <div class="voting-bar">
+      <h2 id="room-title">Session</h2>
+      <div class="voting-bar-right">
+        <span class="room-code-chip" id="room-code-chip" title="Click to copy invite link">Code: <strong id="room-code">—</strong> 📋</span>
+        <button class="btn btn-ghost btn-sm" id="btn-leave-room">Leave</button>
+      </div>
+    </div>
+
+    <main>
+      <div class="room-invite" id="room-invite">
+        <span>Invite your team:</span>
+        <input type="text" id="room-link" readonly>
+        <button class="btn btn-red btn-sm" id="btn-copy-link">Copy link</button>
+      </div>
+
+      <!-- What are we estimating -->
+      <div class="story-card">
+        <label class="room-story-label">What are we estimating?</label>
+        <div class="room-story-row">
+          <input type="text" id="room-story-input" placeholder="Type a story / ticket and press Enter…" maxlength="300">
+          <button class="btn btn-dark btn-sm" id="btn-set-story">Set</button>
+        </div>
+        <p class="room-story-current" id="room-story-current"></p>
+      </div>
+
+      <!-- Cast your vote -->
+      <div class="vote-section" id="room-vote-section">
+        <div class="vote-section-title">Your Vote <span class="muted" id="room-you-label"></span></div>
+        <div class="vote-cards-row" id="room-vote-cards"></div>
+      </div>
+
+      <!-- Participants -->
+      <div class="team-votes-section">
+        <div class="team-votes-title">
+          Participants <span id="room-vote-progress" class="muted"></span>
+        </div>
+        <div id="room-participants" class="team-vote-grid"></div>
+
+        <div class="voting-actions">
+          <button class="btn btn-red" id="btn-room-reveal">Reveal Cards</button>
+          <button class="btn btn-dark" id="btn-room-reset">New Round</button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="room-results" style="display:none">
+        <div class="reveal-summary">
+          <div class="median-block">
+            <div class="median-label">Average</div>
+            <div class="median-num" id="room-avg">—</div>
+          </div>
+          <div id="room-distribution" class="dist-chart"></div>
+          <div class="median-block">
+            <div class="median-label">Agreement</div>
+            <div class="median-num" id="room-agreement" style="font-size:1.4rem">—</div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════════
@@ -251,7 +420,9 @@
 
 <div id="toast-container"></div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/app.js"></script>
+<script src="/js/multiplayer.js"></script>
 </body>
 </html>

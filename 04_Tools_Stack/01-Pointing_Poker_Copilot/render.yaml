@@ -1,0 +1,16 @@
+# Render Blueprint — one-click deploy of Planning Poker Copilot (with live multiplayer).
+# Render runs a persistent Node process, which socket.io rooms require.
+services:
+  - type: web
+    name: pointing-poker-copilot
+    runtime: node
+    rootDir: 04_Tools_Stack/01-Pointing_Poker_Copilot
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      # Optional — set to a real sk-ant-... key for live AI, or "MOCK" for demo AI.
+      # Leave unset to run with AI features simply disabled (Quick Sessions need no key).
+      - key: ANTHROPIC_API_KEY
+        sync: false
